@@ -77,44 +77,28 @@ jobs:
               run: npm run build
 
             - name : upload dist artifact
-              uses: actions/upload-artifact@v4
+              id: deployment
+              uses: actions/upload-pages-artifact@v3 # or specific "vX.X.X" version tag for this action
               with:
-                  name: dist-${{ github.run_id }}
-                  path: dist
+                path: build_outputs_folder/
 
     deploy:
         runs-on: ubuntu-latest
         needs: build
+        # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+        permissions:
+          pages: write      # to deploy to Pages
+          id-token: write   # to verify the deployment originates from an appropriate source
+
+        # Deploy to the github-pages environment
+        environment:
+          name: github-pages
+          url: ${{ steps.deployment.outputs.page_url }}
+
+        # Specify runner + deployment step
         steps:
-            - name : Download dist artifact
-              uses: actions/download-artifact@v4
-              with:
-                  name: dist-${{ github.run_id }}
-                  path: dist
-
-            - name : Deploy to server
-              run: |
-                echo "Deploying to server..."
-                # Add your deployment commands here, e.g., scp, rsync, etc.
-
-#   deploy:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v2
-
-#       - name: Set up Node.js
-#         uses: actions/setup-node@v2
-#         with:
-#           node-version: '16'
-
-#       - name: Install dependencies
-#         run: npm install
-
-#       - name: Build project
-#         run: npm run build
-
-#       - name: Deploy to server
-#         run: |
-#           echo "Deploying to server..."
-#           # Add your deployment commands here, e.g., scp, rsync, etc.
+          - name: Deploy to GitHub Pages
+            id: deployment
+            uses: actions/deploy-pages@v4
+              
+              
