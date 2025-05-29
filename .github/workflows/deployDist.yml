@@ -8,7 +8,7 @@ jobs:
               run : |
                  echo "Getting Code..."
                  echo "${{toJson(github)}}"
-                 git clone ${{github.event.repository.ssh_url}}
+                 git clone "https://github.com/${{github.repository}}.git"
                  echo "Code retrieved successfully.";
 
 #   deploy:
