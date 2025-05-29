@@ -80,7 +80,9 @@ jobs:
               id: deployment
               uses: actions/upload-pages-artifact@v3 # or specific "vX.X.X" version tag for this action
               with:
-                path: build_outputs_folder/
+                path: dist # Path to the directory containing the built files
+                # If you want to specify a custom name for the artifact, you can use:
+                # artifact-name: my-custom-artifact-name
 
     deploy:
         runs-on: ubuntu-latest
