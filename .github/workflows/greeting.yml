@@ -6,3 +6,5 @@ jobs:
         steps:
             - name: "Greet User"
               run: echo "Hello ${{ github.actor }}"
+            - name: "Greet User with Custom Message"
+              run: echo "Hello ${{ github.actor }}, welcome to the repository!"
