@@ -5,11 +5,21 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: Get Code
-              run : |
-                 echo "Getting Code..."
-                 echo "${{toJson(github)}}"
-                 git clone "https://github.com/${{github.repository}}.git"
-                 echo "Code retrieved successfully.";
+              uses: actions/checkout@v4
+
+            #   run : |
+            #      echo "Getting Code..."
+            #      echo "${{toJson(github)}}"
+            #      git clone "https://github.com/${{github.repository}}.git"
+            #      echo "Code retrieved successfully.";
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+
+            - name: Print Node.js version
+              run: node --version
 
 #   deploy:
 #     runs-on: ubuntu-latest
