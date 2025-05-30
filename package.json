@@ -1,8 +1,9 @@
 {
-  "name": "react-demo",
+  "name": "react-cicd-actions",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://therishabh.github.io/react-cicd-actions",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
