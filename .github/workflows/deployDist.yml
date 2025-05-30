@@ -1,107 +1,122 @@
-name : Deploy Dist
-on: 
-    push:
-        branches:
-            - main
-            - master
-            - feature/**
-        paths-ignore:
-            - .github/workflows/*
-            - README.md
-    workflow_dispatch:
+# Name of the GitHub Actions workflow
+name: Deploy Dist
 
+# Events that trigger this workflow
+on:
+  # Trigger the workflow on push to the specified branches
+  push:
+    branches:
+      - main        # main branch
+      - master      # master branch
+      - feature/**  # any branch that starts with 'feature/'
+    paths-ignore:
+      - .github/workflows/* # ignore changes to workflow files
+      - README.md           # ignore changes to README file
+  # Allow manual trigger from GitHub UI
+  workflow_dispatch:
+
+# Global environment variables
 env:
-    NODE_VERSION: 20
+  NODE_VERSION: 20  # Define Node.js version to be used in all jobs
 
+# First job: Runs tests
 jobs:
-    test:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+  test:
+    runs-on: ubuntu-latest  # Use the latest Ubuntu runner provided by GitHub
 
-            #   run : |
-            #      echo "Getting Code..."
-            #      echo "${{toJson(github)}}"
-            #      git clone "https://github.com/${{github.repository}}.git"
-            #      echo "Code retrieved successfully.";
+    steps:
+      # Step 1: Checkout the repository code into the workflow
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Set up Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ env.NODE_VERSION }}
+      # Step 2: Set up the required Node.js version using the setup-node action
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}  # Use the version defined in env
 
-            - name: Print Node.js and npm version
-              run: |
-                node --version
-                npm --version
+      # Step 3: Print out the installed Node.js and npm versions (for verification/debugging)
+      - name: Print Node.js and npm version
+        run: |
+          node --version
+          npm --version
 
-            - name : Cache npm
-              uses: actions/cache@v4
-              with:
-                  path: ~/.npm
-                  key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-npm-${{ hashFiles('**/package-lock.json') }}
-                  restore-keys: |
-                    ${{ runner.os }}-node-${{ env.NODE_VERSION }}-npm-
+      # Step 4: Cache the npm modules to improve future build times
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-npm-
 
-            - name : Install dependencies
-              run: npm ci --prefer-offline --no-audit --progress=false
-            
-            - name : Run Tests
-              run: npm run test
+      # Step 5: Install all required project dependencies
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --progress=false
 
-    build:
-        runs-on: ubuntu-latest
-        needs: test
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+      # Step 6: Run the test suite to ensure code correctness
+      - name: Run Tests
+        run: npm run test
 
-            - name: Set up Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ env.NODE_VERSION }}
-        
-            - name : Cache npm
-              uses: actions/cache@v4
-              with:
-                  path: ~/.npm
-                  key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-npm-${{ hashFiles('**/package-lock.json') }}
-                  restore-keys: |
-                    ${{ runner.os }}-node-${{ env.NODE_VERSION }}-npm-
+  # Second job: Build the project (only if the tests pass)
+  build:
+    runs-on: ubuntu-latest
+    needs: test  # Ensure this job runs only after the "test" job succeeds
 
-            - name : Install dependencies
-              run: npm ci --prefer-offline --no-audit --progress=false
-            
-            - name : Build project
-              run: npm run build
+    steps:
+      # Step 1: Checkout the code again (each job runs in a new VM)
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name : upload dist artifact
-              id: deployment
-              uses: actions/upload-pages-artifact@v3 # or specific "vX.X.X" version tag for this action
-              with:
-                path: dist # Path to the directory containing the built files
-                # If you want to specify a custom name for the artifact, you can use:
-                # artifact-name: my-custom-artifact-name
+      # Step 2: Set up Node.js again
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
-    deploy:
-        runs-on: ubuntu-latest
-        needs: build
-        # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
-        permissions:
-          pages: write      # to deploy to Pages
-          id-token: write   # to verify the deployment originates from an appropriate source
+      # Step 3: Restore the cached npm modules
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ env.NODE_VERSION }}-npm-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-${{ env.NODE_VERSION }}-npm-
 
-        # Deploy to the github-pages environment
-        environment:
-          name: github-pages
+      # Step 4: Install dependencies again for the build process
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit --progress=false
 
-        # Specify runner + deployment step
-        steps:
-          - name: Deploy to GitHub Pages
-            id: deployment
-            uses: actions/deploy-pages@v4
-            with:
-              token: ${{ secrets.GITHUB_TOKEN }}
-              
-              
+      # Step 5: Run the build command to generate production-ready files
+      - name: Build project
+        run: npm run build
+
+      # Step 6: Upload the build artifacts (dist folder) to be used in the next deploy job
+      - name: Upload dist artifact
+        id: deployment
+        uses: actions/upload-pages-artifact@v3  # Uploads the "dist" directory
+        with:
+          path: dist  # The folder containing the built files
+
+  # Third job: Deploy the built files to GitHub Pages
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build  # This job runs only if the build job succeeds
+
+    # Grant required permissions for GitHub Pages deployment
+    permissions:
+      pages: write    # Needed to deploy to GitHub Pages
+      id-token: write # Needed for secure deployment/auth
+
+    # Specify the target deployment environment
+    environment:
+      name: github-pages  # Optional but helps in tracking deployments in GitHub UI
+
+    # Actual steps to deploy the site
+    steps:
+      # Step 1: Deploy the uploaded artifact to GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}  # Use GitHub’s built-in token for authentication
